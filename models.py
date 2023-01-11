@@ -36,7 +36,7 @@ class GradientReversal(Function):
 
     @staticmethod
     def backward(ctx, grad_output):
-        return -0.1 * grad_output
+        return -1 * grad_output
 
 
 @typechecked
@@ -153,8 +153,10 @@ class AlignmentMixin(nn.Module):
                 alignment_loss,
                 loss,
             )
-            self.counter += 1
-            return (loss-alignment_loss,)
+            if self.training:
+                return (loss-alignment_loss,)
+            else:
+                return alignment_loss
 
 
 @typechecked

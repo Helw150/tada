@@ -268,9 +268,6 @@ def main():
         training_args,
         adapter_args,
     ) = parser.parse_args_into_dataclasses()
-    print(training_args)
-    if(training_args.do_eval):
-        sys.exit()
 
     # 2. Setup logging
     logging.basicConfig(
@@ -396,9 +393,6 @@ def main():
     set_seed(training_args.seed)
 
     # We need to tokenize inputs and targets.
-    print(training_args.do_eval)
-    if(training_args.do_eval):
-        sys.exit()
     if training_args.do_train:
         column_names = dataset["train"].column_names
     elif training_args.do_eval:
