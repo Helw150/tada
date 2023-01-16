@@ -147,16 +147,21 @@ class AlignmentMixin(nn.Module):
                     dim=1,
                 )
             hidden_mat = GradientReversal.apply(hidden_mat.squeeze(1))
-            alignment_loss = (original_embedding[:, 0, :] - hidden_mat[:, 0, :]).square().sum(1).mean()
+            alignment_loss = (
+                (original_embedding[:, 0, :] - hidden_mat[:, 0, :])
+                .square()
+                .sum(1)
+                .mean()
+            )
             loss = self.critic(hidden_mat) - self.critic(original_embedding)
             print(
                 alignment_loss,
                 loss,
             )
             if self.training:
-                return (loss-alignment_loss,)
+                return (loss - alignment_loss,)
             else:
-                return alignment_loss
+                return (alignment_loss,)
 
 
 @typechecked

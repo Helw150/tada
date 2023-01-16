@@ -1,10 +1,10 @@
-export CUDA_VISIBLE_DEVICES=1
+export CUDA_VISIBLE_DEVICES=$(nvidia-smi --query-gpu=memory.free,index --format=csv,nounits,noheader | sort -nr | head -1 | awk '{ print $NF }') 
 
 HF_ORG="WillHeld"
 
 for MODEL_NAME in roberta-base #bert-base-uncased #roberta-base
 do
-    MODEL=pfadapter-${MODEL_NAME}-tada-values
+    MODEL=pfadapter-${MODEL_NAME}-tada-adv
     echo $MODEL
     py contrastive_adapter.py \
        --do_eval=False \
@@ -15,7 +15,7 @@ do
        --dialect "aave" \
        --max_train_samples 1000 \
        --max_eval_samples 100 \
-       --output_dir ./tada_train_layer0/$MODEL_NAME \
+       --output_dir ./tada_train_adv/$MODEL_NAME \
        --max_seq_length 128 \
        --per_device_train_batch_size 16 \
        --learning_rate 5e-4 \
