@@ -50,7 +50,7 @@ parent = os.path.dirname(current)
 # adding the parent directory to
 # the sys.path.
 sys.path.append(parent)
-from multivalue.src.Dialects import AfricanAmericanVernacular
+from multivalue.src.Dialects import *
 
 logger = logging.getLogger(__name__)
 
@@ -418,6 +418,12 @@ def main():
             dialect = None
             if dialect_name == "aave":
                 dialect = AfricanAmericanVernacular(morphosyntax=True)
+            elif dialect_name == "IndianEnglish":
+                dialect = IndianDialect(morphosyntax=True)
+            elif dialect_name == "CollSgE":
+                dialect = ColloquialSingaporeDialect(morphosyntax=True)
+            elif dialect_name == "NigerianEnglish":
+                dialect = NigerianDialect(morphosyntax=True)
 
             original_text = examples[text_column] + examples["sentence2"]
             transformed_text = [
