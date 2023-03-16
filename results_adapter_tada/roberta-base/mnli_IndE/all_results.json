@@ -1,0 +1,14 @@
+{
+    "eval_accuracy": 0.8360672440142639,
+    "eval_accuracy_mm": 0.8394019528071603,
+    "eval_loss": 0.4347781240940094,
+    "eval_loss_mm": 0.43419137597084045,
+    "eval_runtime": 37.8677,
+    "eval_runtime_mm": 29.9879,
+    "eval_samples": 9815,
+    "eval_samples_mm": 9832,
+    "eval_samples_per_second": 259.192,
+    "eval_samples_per_second_mm": 327.866,
+    "eval_steps_per_second": 32.402,
+    "eval_steps_per_second_mm": 40.983
+}
