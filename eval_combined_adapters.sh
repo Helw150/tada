@@ -16,7 +16,7 @@ do
 	           --overwrite_output_dir \
 	           --adapter_config pfeiffer \
 	           --train_adapter \
-	           --load_adapter ./results_combo_adapt/roberta-base/qqp/checkpoint-326500//qqp \
+	           --load_adapter $ADAPTER_ADDRESS \
 	           --do_eval
 
 	python run_glue_adapterhub.py \
@@ -27,7 +27,7 @@ do
 	           --adapter_config pfeiffer \
 	           --train_adapter \
 	           --dialect="aave" \
-	           --load_adapter ./results_combo_adapt/roberta-base/qqp/checkpoint-326500//qqp \
+	           --load_adapter $ADAPTER_ADDRESS \
 	           --do_eval
     done
 done
