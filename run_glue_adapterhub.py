@@ -20,12 +20,15 @@ import logging
 import os
 import random
 import sys
+import torch
 from dataclasses import dataclass, field
 from typing import Optional
+import pickle as pkl
 
 import datasets
 import numpy as np
-from datasets import load_dataset
+from datasets import interleave_datasets, load_dataset, load_metric
+from multivalue.src.Dialects import *
 
 import evaluate
 import transformers
@@ -45,7 +48,8 @@ from transformers.adapters import (
     AdapterArguments,
     AdapterTrainer,
     AutoAdapterModel,
-    setup_adapter_training,
+    AdapterConfig,
+    Stack,
 )
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version
@@ -506,11 +510,7 @@ def main():
         # check if adapter already exists, otherwise add it
         if task_name not in model.config.adapters:
             # resolve the adapter config
-            adapter_config = AdapterConfig.load(
-                adapter_args.adapter_config,
-                non_linearity=adapter_args.adapter_non_linearity,
-                reduction_factor=adapter_args.adapter_reduction_factor,
-            )
+            adapter_config = AdapterConfig.load(adapter_args.adapter_config)
             # load a pre-trained from Hub if specified
             if adapter_args.load_adapter:
                 model.load_adapter(
@@ -524,15 +524,12 @@ def main():
             # resolve the language adapter config:
             lang_adapter_config = AdapterConfig.load(
                 adapter_args.lang_adapter_config,
-                non_linearity=adapter_args.lang_adapter_non_linearity,
-                reduction_factor=adapter_args.lang_adapter_reduction_factor,
             )
             # load the language adapter from Hub
             lang_adapter_name = model.load_adapter(
                 adapter_args.load_lang_adapter,
                 source="hf",
                 config=lang_adapter_config,
-                load_as=adapter_args.language,
             )
         else:
             lang_adapter_name = None
@@ -540,7 +537,7 @@ def main():
         model.train_adapter([task_name])
         # Set the adapters to be used in every forward pass
         if lang_adapter_name:
-            model.set_active_adapters(ac.Stack(lang_adapter_name, task_name))
+            model.set_active_adapters(Stack(lang_adapter_name, task_name))
         else:
             model.set_active_adapters([task_name])
         # print(model.adapter_summary())
@@ -786,8 +783,6 @@ def main():
     else:
         data_collator = None
 
-    # Setup adapters
-    setup_adapter_training(model, adapter_args, data_args.task_name or "glue")
     # Initialize our Trainer
     trainer_class = AdapterTrainer if adapter_args.train_adapter else Trainer
     trainer = trainer_class(
