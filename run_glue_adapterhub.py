@@ -685,7 +685,7 @@ def main():
             dialect_datasets = load_dataset(
                 "SALT-NLP/" + data_args.task_name + "_VALUE",
                 cache_dir=cache_name,
-                use_auth_token=True if model_args.use_auth_token else None,
+                use_auth_token=True,
             )
         else:
             dialect_datasets = raw_datasets
@@ -717,8 +717,6 @@ def main():
             max_train_samples = min(len(train_dataset), data_args.max_train_samples)
             train_dataset = train_dataset.select(range(max_train_samples))
 
-    if training_args.do_eval:
-        sys.exit()
     if training_args.do_eval:
         if (
             "validation" not in raw_datasets
