@@ -20,34 +20,32 @@ import logging
 import os
 import random
 import sys
-import torch
 from dataclasses import dataclass, field
 from typing import Optional
-import pickle as pkl
 
 import datasets
 import numpy as np
-from datasets import interleave_datasets, load_dataset, load_metric
-from multivalue.src.Dialects import *
+from datasets import load_dataset
 
+import evaluate
 import transformers
-import transformers.adapters.composition as ac
 from transformers import (
-    AdapterConfig,
-    AdapterTrainer,
-    AutoAdapterModel,
     AutoConfig,
-    AutoModelForSequenceClassification,
     AutoTokenizer,
     DataCollatorWithPadding,
     EvalPrediction,
     HfArgumentParser,
-    MultiLingAdapterArguments,
     PretrainedConfig,
     Trainer,
     TrainingArguments,
     default_data_collator,
     set_seed,
+)
+from transformers.adapters import (
+    AdapterArguments,
+    AdapterTrainer,
+    AutoAdapterModel,
+    setup_adapter_training,
 )
 from transformers.trainer_utils import get_last_checkpoint
 from transformers.utils import check_min_version
@@ -265,7 +263,7 @@ class ModelArguments:
         default=False,
         metadata={
             "help": (
-                "Will use the token generated when running `transformers-cli login` (necessary to use this script "
+                "Will use the token generated when running `huggingface-cli login` (necessary to use this script "
                 "with private models)."
             )
         },
@@ -284,12 +282,7 @@ def main():
     # We now keep distinct sets of args, for a cleaner separation of concerns.
 
     parser = HfArgumentParser(
-        (
-            ModelArguments,
-            DataTrainingArguments,
-            TrainingArguments,
-            MultiLingAdapterArguments,
-        )
+        (ModelArguments, DataTrainingArguments, TrainingArguments, AdapterArguments)
     )
 
     if len(sys.argv) == 2 and sys.argv[1].endswith(".json"):
@@ -305,6 +298,7 @@ def main():
             training_args,
             adapter_args,
         ) = parser.parse_args_into_dataclasses()
+
     # Setup logging
     logging.basicConfig(
         format="%(asctime)s - %(levelname)s - %(name)s - %(message)s",
@@ -764,9 +758,9 @@ def main():
 
     # Get the metric function
     if data_args.task_name is not None:
-        metric = load_metric("glue", data_args.task_name)
+        metric = evaluate.load("glue", data_args.task_name)
     else:
-        metric = load_metric("accuracy")
+        metric = evaluate.load("accuracy")
 
     # You can define your custom compute_metrics function. It takes an `EvalPrediction` object (a namedtuple with a
     # predictions and label_ids field) and has to return a dictionary string to float.
@@ -792,6 +786,8 @@ def main():
     else:
         data_collator = None
 
+    # Setup adapters
+    setup_adapter_training(model, adapter_args, data_args.task_name or "glue")
     # Initialize our Trainer
     trainer_class = AdapterTrainer if adapter_args.train_adapter else Trainer
     trainer = trainer_class(
@@ -835,7 +831,13 @@ def main():
         eval_datasets = [eval_dataset]
         if data_args.task_name == "mnli":
             tasks.append("mnli-mm")
-            eval_datasets.append(raw_datasets["validation_mismatched"])
+            valid_mm_dataset = raw_datasets["validation_mismatched"]
+            if data_args.max_eval_samples is not None:
+                max_eval_samples = min(
+                    len(valid_mm_dataset), data_args.max_eval_samples
+                )
+                valid_mm_dataset = valid_mm_dataset.select(range(max_eval_samples))
+            eval_datasets.append(valid_mm_dataset)
             combined = {}
 
         for eval_dataset, task in zip(eval_datasets, tasks):
@@ -860,24 +862,7 @@ def main():
 
     if training_args.do_predict:
         logger.info("*** Predict ***")
-        metrics = trainer.evaluate(eval_dataset=predict_dataset)
-        print(metrics)
-        max_eval_samples = (
-            data_args.max_eval_samples
-            if data_args.max_eval_samples is not None
-            else len(predict_dataset)
-        )
-        metrics["eval_samples"] = min(max_eval_samples, len(predict_dataset))
 
-        if task == "mnli-mm":
-            metrics = {k + "_mm": v for k, v in metrics.items()}
-        if task is not None and "mnli" in task:
-            combined.update(metrics)
-
-        trainer.log_metrics("pred", metrics)
-        trainer.save_metrics(
-            "pred", combined if task is not None and "mnli" in task else metrics
-        )
         # Loop to handle MNLI double evaluation (matched, mis-matched)
         tasks = [data_args.task_name]
         predict_datasets = [predict_dataset]
